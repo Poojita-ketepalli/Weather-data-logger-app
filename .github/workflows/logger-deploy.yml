@@ -71,7 +71,8 @@ jobs:
       - name: Move terraform output to current dir
         run: |
           mv terraform-output/tf-output.json tf-output.json
-
+      
+      
 
       - name: Extract EC2 Public IP
         id: extract-ip

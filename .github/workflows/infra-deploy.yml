@@ -51,10 +51,16 @@ jobs:
           ls -al
           cat tf-output.json
 
+      # Move tf-output.json to root before uploading
+      - name: Move output to root for upload
+        run: mv tf-output.json ../tf-output.json
+        working-directory: infra
+
       - name: Upload terraform Output as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: terraform-output
-          path: infra/tf-output.json
+          path: tf-output.json
+
       # Makes the output file available to the app deployment workflow
 
