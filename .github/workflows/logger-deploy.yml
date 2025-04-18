@@ -26,7 +26,7 @@ jobs:
         # This build our spring boot application and creates a .jar file in /target folder
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: logger-jar
           path: target/*.jar

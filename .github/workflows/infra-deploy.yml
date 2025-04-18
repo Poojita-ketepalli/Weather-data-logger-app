@@ -49,7 +49,7 @@ jobs:
       # Exports output variables (like EC2 public IP) to a JSON file
 
       - name: Upload terraform Output as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: terraform-output
           path: tf-output.json
