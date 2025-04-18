@@ -1,13 +1,13 @@
-name: Logger App CI/CD on github actions
+name: Logger App CI/CD on GitHub Actions
 
 on:
   push:
     branches:
-      - main # This triggers the workflow on push to main branch
+      - main
 
 jobs:
-  build-and-deply:
-    runs-on: ubuntu-latest # The github actions runner
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
     services:
       mysql:
@@ -17,50 +17,49 @@ jobs:
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
         ports:
           - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -p${{ secrets.MYSQL_PASSWORD }} --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        # This checks out our github repo code so we can build it.
 
-      - name: Setup java
+      - name: Setup Java
         uses: actions/setup-java@v3
         with:
           java-version: 17
           distribution: 'temurin'
-        # This installs java 17 (used by spring boot) on the github actions runner
 
-      - name: Debug Secrets (Check If They Exist)
-        run: |
-          echo "MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}"
-          echo "MYSQL_PASSWORD: (hidden)"
-
-      - name: Verify MySQL Connection
-        run: |
-          mysql -h 127.0.0.1 -uroot -p"${{ secrets.MYSQL_PASSWORD }}" -e "SHOW DATABASES;"
-          
       - name: Wait for MySQL to be Ready
         run: |
-          echo "Waiting for MySQL to be ready..."
+          echo "⏳ Waiting for MySQL to be ready..."
           for i in {1..60}; do
             if mysqladmin ping -h127.0.0.1 -uroot -p"${{ secrets.MYSQL_PASSWORD }}" --silent; then
               echo "✅ MySQL is up and running!"
               break
             fi
-            echo "⏳ Waiting for MySQL... ($i/60)"
+            echo "Waiting... ($i/60)"
             sleep 2
           done
 
-      - name: Build with maven
+      - name: Verify MySQL Connection
+        run: |
+          mysql -h 127.0.0.1 -uroot -p"${{ secrets.MYSQL_PASSWORD }}" -e "SHOW DATABASES;"
+
+      - name: Build with Maven
         run: mvn clean install
-        # This build our spring boot application and creates a .jar file in /target folder
+        env:
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: logger-jar
           path: target/*.jar
-        # Stores the built JAR temporarily in the github actions environment
 
       - name: Download Terraform Output
         uses: actions/download-artifact@v4
