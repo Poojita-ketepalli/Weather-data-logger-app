@@ -1,6 +1,10 @@
 name: Logger App CI/CD on github actions
 
 on:
+  workflow_run:
+    workflows: [ "Infrastructure as code" ]
+    types:
+      - completed
   push:
     branches:
       - main # This triggers the workflow on push to main branch
@@ -65,7 +69,7 @@ jobs:
       - name: Download Terraform Output
         uses: actions/download-artifact@v4
         with:
-          name: tf-output.json
+          name: tf-output
 
       - name: Extract EC2 Public IP
         id: extract-ip
