@@ -70,9 +70,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-      - name: Move terraform output to current dir
+      - name: Rename tf-output.json if needed
         run: |
-          mv terraform-output/tf-output.json tf-output.json
+          if [ -f tf-output.json ]; then
+            echo "✅ File is already in current dir"
+          elif [ -f terraform-output.json ]; then
+            mv terraform-output.json tf-output.json
+          else
+            echo "❌ tf-output.json not found!"
+            exit 1
+          fi
       
       
 
