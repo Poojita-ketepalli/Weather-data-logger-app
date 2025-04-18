@@ -2,8 +2,6 @@ name: Infrastructure as code
 
 on:
   push:
-    paths:
-      - 'infra/**'
     branches:
       - main
 
