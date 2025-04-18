@@ -63,10 +63,12 @@ jobs:
           path: target/*.jar
         # Stores the built JAR temporarily in the github actions environment
 
-      - name: Download Terraform Output
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-output
+      - name: Download artifact using GitHub CLI
+        run: |
+          gh run download -n terraform-output
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Move terraform output to current dir
         run: |
