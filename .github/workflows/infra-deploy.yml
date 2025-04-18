@@ -63,6 +63,7 @@ jobs:
           echo "----- tf-output.json contents -----"
           cat tf-output.json
           echo "-----------------------------------"
+        working-directory: infra/
 
       # Validate the tf-output.json format
       - name: Validate tf-output.json
@@ -72,10 +73,12 @@ jobs:
             echo "❌ Invalid JSON format in tf-output.json"
             exit 1
           fi
+        working-directory: infra/
 
       # Debugging - Show tf-output.json
       - name: Debug - Show tf-output.json
         run: cat tf-output.json
+        working-directory: infra/
 
       # Extract EC2 Public IP from the Terraform output JSON
       - name: Extract EC2 Public IP
@@ -85,6 +88,7 @@ jobs:
           IP=$(jq -r '.public_ip.value' tf-output.json)
           echo "✅ Extracted IP: $IP"
           echo "EC2_IP=$IP" >> $GITHUB_ENV
+        working-directory: infra/
 
 
       # Wait for MySQL to be ready
