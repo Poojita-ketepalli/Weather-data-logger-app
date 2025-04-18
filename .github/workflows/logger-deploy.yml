@@ -80,14 +80,17 @@ jobs:
             echo "❌ tf-output.json not found!"
             exit 1
           fi
-      
-      
+
+      - name: Show contents of tf-output.json
+        run: cat tf-output.json
 
       - name: Extract EC2 Public IP
         id: extract-ip
         run: |
           IP=$(jq -r '.public_ip.value' tf-output.json)
+          echo "✅ IP fetched: $IP"
           echo "EC2_IP=$IP" >> $GITHUB_ENV
+      
 
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.4
