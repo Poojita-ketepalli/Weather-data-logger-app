@@ -65,7 +65,7 @@ jobs:
       - name: Download Terraform Output
         uses: actions/download-artifact@v4
         with:
-          name: tf-output
+          name: tf-output.json
 
       - name: Extract EC2 Public IP
         id: extract-ip
