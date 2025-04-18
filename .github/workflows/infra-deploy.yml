@@ -56,18 +56,14 @@ jobs:
         run: mv tf-output.json ../tf-output.json
         working-directory: infra
 
+      - name: Save Terraform output
+        run: terraform output -json > tf-output.json
+
       - name: Upload terraform Output as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: terraform-output
           path: tf-output.json
-
-      # Makes the output file available to the app deployment workflow
-
-      - name: Save clean Terraform output (no logs)
-        id: save-tf-output
-        run: |
-          echo "$(terraform output -json)" > tf-output.json
 
       - name: Print terraform JSON output
         run: cat tf-output.json

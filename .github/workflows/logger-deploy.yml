@@ -63,23 +63,20 @@ jobs:
           path: target/*.jar
         # Stores the built JAR temporarily in the github actions environment
 
-      - name: Download artifact using GitHub CLI
-        run: |
-          gh run download -n terraform-output
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download Terraform Output
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-output
 
-
-      - name: Rename tf-output.json if needed
+      - name: Move terraform output to current dir
         run: |
-          if [ -f tf-output.json ]; then
-            echo "✅ File is already in current dir"
-          elif [ -f terraform-output.json ]; then
-            mv terraform-output.json tf-output.json
-          else
-            echo "❌ tf-output.json not found!"
-            exit 1
-          fi
+            mv terraform-output/tf-output.json tf-output.json
+
+            - name: Extract EC2 Public IP
+              id: extract-ip
+              run: |
+                IP=$(jq -r '.public_ip.value' tf-output.json)
+                echo "EC2_IP=$IP" >> $GITHUB_ENV
 
       - name: Show contents of tf-output.json
         run: cat tf-output.json
