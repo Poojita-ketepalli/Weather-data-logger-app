@@ -1,4 +1,4 @@
-name: Infrastructure as code
+name: Infrastructure and Logger App Deployment
 
 on:
   push:
@@ -15,10 +15,10 @@ jobs:
         working-directory: infra
 
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: setup terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.0
@@ -30,7 +30,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      - name: Terraform init
+      - name: Terraform Init
         run: terraform init
 
       - name: Terraform Plan
@@ -39,26 +39,27 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
 
-      - name: Save Terraform output
+      - name: Save Terraform output to JSON
         run: terraform output -json > tf-output.json
 
-      - name: Debug - Check if tf-output.json exists
+      - name: Debug - Check tf-output.json
         run: |
           ls -al
           cat tf-output.json
 
       - name: Move output to root for upload
         run: mv tf-output.json ../tf-output.json
-        working-directory: infra
 
-      - name: Upload terraform Output as Artifact
+      - name: Upload tf-output.json Artifact
         uses: actions/upload-artifact@v4
         with:
           name: terraform-output
           path: tf-output.json
 
   build-and-deploy:
+    name: Build and Deploy Logger App
     runs-on: ubuntu-latest
+    needs: terraform
 
     services:
       mysql:
@@ -73,7 +74,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup java
+      - name: Setup Java
         uses: actions/setup-java@v3
         with:
           java-version: 17
@@ -81,50 +82,46 @@ jobs:
 
       - name: Wait for MySQL to be Ready
         run: |
-          echo "Waiting for MySQL to be ready..."
+          echo "Waiting for MySQL..."
           for i in {1..60}; do
             if mysqladmin ping -h127.0.0.1 -uroot -p"${{ secrets.MYSQL_PASSWORD }}" --silent; then
-              echo "✅ MySQL is up and running!"
+              echo "✅ MySQL is up!"
               break
             fi
-            echo "⏳ Waiting for MySQL... ($i/60)"
+            echo "⏳ Waiting... ($i/60)"
             sleep 2
           done
 
-      - name: Build with maven
+      - name: Verify MySQL Connection
+        run: |
+          mysql -h 127.0.0.1 -uroot -p"${{ secrets.MYSQL_PASSWORD }}" -e "SHOW DATABASES;"
+
+      - name: Build App with Maven
         run: mvn clean install
 
-      - name: Upload Artifact
+      - name: Upload Built Jar
         uses: actions/upload-artifact@v4
         with:
           name: logger-jar
           path: target/*.jar
 
-      - name: Download Terraform Output
+      - name: Download Terraform Output Artifact
         uses: actions/download-artifact@v4
         with:
           name: terraform-output
 
-      - name: Rename tf-output.json if needed
-        run: |
-          if [ -f tf-output.json ]; then
-            echo "✅ File is already in current dir"
-          elif [ -f terraform-output.json ]; then
-            mv terraform-output.json tf-output.json
-          else
-            echo "❌ tf-output.json not found!"
-            exit 1
-          fi
+      - name: Validate tf-output.json
+        run: jq . tf-output.json > /dev/null
 
-      - name: Show contents of tf-output.json
+      - name: Debug - Show tf-output.json
         run: cat tf-output.json
 
       - name: Extract EC2 Public IP
         id: extract-ip
         run: |
           echo "Parsing tf-output.json for public_ip"
-          jq '.' tf-output.json  # Debug the entire structure
-          IP=$(jq -r '.public_ip.value' tf-output.json)  # Extract the public IP
+          IP=$(jq -r '.public_ip.value' tf-output.json)
+          echo "✅ Extracted IP: $IP"
           echo "EC2_IP=$IP" >> $GITHUB_ENV
 
       - name: Copy JAR to EC2
