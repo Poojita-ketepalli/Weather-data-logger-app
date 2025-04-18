@@ -64,8 +64,10 @@ jobs:
 
       # Makes the output file available to the app deployment workflow
 
-      - name: Save Terraform output
-        run: terraform output -json > tf-output.json
+      - name: Save clean Terraform output (no logs)
+        id: save-tf-output
+        run: |
+          echo "$(terraform output -json)" > tf-output.json
 
       - name: Print terraform JSON output
         run: cat tf-output.json
