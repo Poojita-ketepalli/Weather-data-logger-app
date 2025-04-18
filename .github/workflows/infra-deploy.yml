@@ -80,12 +80,15 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
-
       - name: Install Terraform
         run: |
-          curl -LO https://github.com/hashicorp/terraform/releases/download/v1.6.0/terraform_1.6.0_linux_amd64.zip
+          echo "Downloading Terraform..."
+          curl -LO https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+          echo "Verifying download..."
+          ls -lh terraform_1.6.0_linux_amd64.zip
           unzip terraform_1.6.0_linux_amd64.zip
           sudo mv terraform /usr/local/bin/
+          terraform --version
 
       - name: Wait for MySQL to be Ready
         run: |
