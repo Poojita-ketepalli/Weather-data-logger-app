@@ -5,9 +5,6 @@ on:
     workflows: [ "Infrastructure as code" ]
     types:
       - completed
-  push:
-    branches:
-      - main # This triggers the workflow on push to main branch
 
 jobs:
   build-and-deply:
@@ -69,7 +66,12 @@ jobs:
       - name: Download Terraform Output
         uses: actions/download-artifact@v4
         with:
-          name: tf-output
+          name: terraform-output
+
+      - name: Move terraform output to current dir
+        run: |
+          mv terraform-output/tf-output.json tf-output.json
+
 
       - name: Extract EC2 Public IP
         id: extract-ip
