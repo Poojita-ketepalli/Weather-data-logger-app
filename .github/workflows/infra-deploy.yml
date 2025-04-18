@@ -6,13 +6,9 @@ on:
       - main
 
 jobs:
-  terraform:
-    name: Terraform Apply
+  deploy:
+    name: Provision Infrastructure and Deploy Logger App
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: infra
 
     services:
       mysql:
@@ -24,14 +20,17 @@ jobs:
           - 3306:3306
 
     steps:
+      # Checkout code from GitHub repository
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.0
 
+      # Configure AWS Credentials for Terraform
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -39,48 +38,56 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
+      # Initialize Terraform and apply using the 'infra' directory
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config=infra/backend.hcl
+        working-directory: infra/
 
       - name: Terraform Plan
         run: terraform plan
+        working-directory: infra/
 
+      # Terraform Apply to provision infrastructure
       - name: Terraform Apply
         run: terraform apply -auto-approve
+        working-directory: infra/
 
+      # Save Terraform output to JSON
       - name: Save Terraform output to JSON
         run: terraform output -json > tf-output.json
+        working-directory: infra/
 
+      # Print raw contents of tf-output.json
       - name: Print raw contents of tf-output.json
         run: |
           echo "----- tf-output.json contents -----"
           cat tf-output.json
           echo "-----------------------------------"
 
-      - name: Move output to root for upload
-        run: mv tf-output.json ../tf-output.json
-
-      - name: Upload tf-output.json Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-output
-          path: tf-output.json
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: 17
-          distribution: 'temurin'
-      - name: Install Terraform
+      # Validate the tf-output.json format
+      - name: Validate tf-output.json
         run: |
-          echo "Downloading Terraform..."
-          curl -LO https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
-          echo "Verifying download..."
-          ls -lh terraform_1.6.0_linux_amd64.zip
-          unzip terraform_1.6.0_linux_amd64.zip
-          sudo mv terraform /usr/local/bin/
-          terraform --version
+          echo "✅ Validating tf-output.json..."
+          if ! jq . tf-output.json > /dev/null 2>&1; then
+            echo "❌ Invalid JSON format in tf-output.json"
+            exit 1
+          fi
 
+      # Debugging - Show tf-output.json
+      - name: Debug - Show tf-output.json
+        run: cat tf-output.json
+
+      # Extract EC2 Public IP from the Terraform output JSON
+      - name: Extract EC2 Public IP
+        id: extract-ip
+        run: |
+          echo "Parsing tf-output.json for public_ip"
+          IP=$(jq -r '.public_ip.value' tf-output.json)
+          echo "✅ Extracted IP: $IP"
+          echo "EC2_IP=$IP" >> $GITHUB_ENV
+
+
+      # Wait for MySQL to be ready
       - name: Wait for MySQL to be Ready
         run: |
           echo "Waiting for MySQL..."
@@ -93,32 +100,23 @@ jobs:
             sleep 2
           done
 
+      # Verify MySQL connection
       - name: Verify MySQL Connection
         run: |
           mysql -h 127.0.0.1 -uroot -p"${{ secrets.MYSQL_PASSWORD }}" -e "SHOW DATABASES;"
 
+      # Build Logger App using Maven (current directory)
       - name: Build App with Maven
         run: mvn clean install
 
+      # Upload built JAR as artifact (current directory)
       - name: Upload Built Jar
         uses: actions/upload-artifact@v4
         with:
           name: logger-jar
           path: target/*.jar
 
-      - name: Download Terraform Output Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-output
-
-      - name: Extract EC2 Public IP
-        id: extract-ip
-        run: |
-          echo "Parsing terraform output for public_ip"
-          IP=$(terraform output -raw public_ip)
-          echo "✅ Extracted IP: $IP"
-          echo "EC2_IP=$IP" >> $GITHUB_ENV
-
+      # Copy the JAR file to EC2 instance (current directory)
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -128,6 +126,7 @@ jobs:
           source: "target/*.jar"
           target: "~/logger-app/"
 
+      # Run the Logger App on EC2 (current directory)
       - name: Run App on EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -137,5 +136,3 @@ jobs:
           script: |
             pkill -f 'java' || true
             nohup java -jar ~/logger-app/*.jar > logger.log 2>&1 &
-
-
