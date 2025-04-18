@@ -54,7 +54,7 @@ jobs:
       - name: Upload terraform Output as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tf-output
+          name: terraform-output
           path: infra/tf-output.json
       # Makes the output file available to the app deployment workflow
 
