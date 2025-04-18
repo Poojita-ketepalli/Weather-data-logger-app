@@ -1,0 +1,57 @@
+name: Infrastructure as code
+
+on:
+  push:
+    paths:
+      - 'infra/**'
+    branches:
+      - main
+
+jobs:
+  terraform:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: infra
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: ap-south-1
+
+      - name: Terraform init
+        run: terraform init
+      # Initializes provider plugins and backend setup
+
+      - name: Terraform Plan
+        run: terraform plan
+      # preview changes before applying
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+      # Applies infrastructure
+
+      - name: Save Terraform output
+        run: terraform output -json > tf-output.json
+      # Exports output variables (like EC2 public IP) to a JSON file
+
+      - name: Upload terraform Output as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-output
+          path: tf-output.json
+      # Makes the output file available to the app deployment workflow
+
