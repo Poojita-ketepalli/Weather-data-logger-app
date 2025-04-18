@@ -9,6 +9,15 @@ jobs:
   build-and-deply:
     runs-on: ubuntu-latest # The github actions runner
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+        ports:
+          - 3306:3306
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,6 +29,27 @@ jobs:
           java-version: 17
           distribution: 'temurin'
         # This installs java 17 (used by spring boot) on the github actions runner
+
+      - name: Debug Secrets (Check If They Exist)
+        run: |
+          echo "MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}"
+          echo "MYSQL_PASSWORD: (hidden)"
+
+      - name: Verify MySQL Connection
+        run: |
+          mysql -h 127.0.0.1 -uroot -p"${{ secrets.MYSQL_PASSWORD }}" -e "SHOW DATABASES;"
+          
+      - name: Wait for MySQL to be Ready
+        run: |
+          echo "Waiting for MySQL to be ready..."
+          for i in {1..60}; do
+            if mysqladmin ping -h127.0.0.1 -uroot -p"${{ secrets.MYSQL_PASSWORD }}" --silent; then
+              echo "✅ MySQL is up and running!"
+              break
+            fi
+            echo "⏳ Waiting for MySQL... ($i/60)"
+            sleep 2
+          done
 
       - name: Build with maven
         run: mvn clean install
