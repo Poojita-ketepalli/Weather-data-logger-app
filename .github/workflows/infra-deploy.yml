@@ -46,10 +46,15 @@ jobs:
         run: terraform output -json > tf-output.json
       # Exports output variables (like EC2 public IP) to a JSON file
 
+      - name: Debug - Check if tf-output.json exists
+        run: |
+          ls -al
+          cat tf-output.json
+
       - name: Upload terraform Output as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: tf-output
-          path: tf-output.json
+          path: infra/tf-output.json
       # Makes the output file available to the app deployment workflow
 
