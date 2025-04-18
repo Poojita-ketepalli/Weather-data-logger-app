@@ -88,7 +88,6 @@ jobs:
         id: extract-ip
         run: |
           IP=$(jq -r '.public_ip.value' tf-output.json)
-          echo "✅ IP fetched: $IP"
           echo "EC2_IP=$IP" >> $GITHUB_ENV
       
 
