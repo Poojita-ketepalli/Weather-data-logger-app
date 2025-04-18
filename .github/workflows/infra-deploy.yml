@@ -114,18 +114,21 @@ jobs:
       - name: Validate tf-output.json
         run: |
           echo "✅ Validating tf-output.json..."
+          # Check if the JSON is valid
           if ! jq . tf-output.json > /dev/null 2>&1; then
             echo "❌ Invalid JSON format in tf-output.json"
-            exit 1
+            # If invalid, clean up and reformat
+            echo "Attempting to sanitize tf-output.json..."
+            jq . tf-output.json > sanitized-tf-output.json || (echo "❌ Failed to sanitize tf-output.json" && exit 1)
+            mv sanitized-tf-output.json tf-output.json
           fi
+          echo "✅ JSON format is valid"
 
-      - name: Debug - Show tf-output.json
-        run: cat tf-output.json
-
-      - name: Sanitize tf-output.json
+      - name: Debug - Show tf-output.json content
         run: |
-          jq . tf-output.json > sanitized-tf-output.json
-          mv sanitized-tf-output.json tf-output.json
+          echo "----- Debugging tf-output.json -----"
+          cat tf-output.json
+          echo "-------------------------------------"
 
       - name: Extract EC2 Public IP
         id: extract-ip
