@@ -42,10 +42,11 @@ jobs:
       - name: Save Terraform output to JSON
         run: terraform output -json > tf-output.json
 
-      - name: Debug - Check tf-output.json
+      - name: Print raw contents of tf-output.json
         run: |
-          ls -al
+          echo "----- tf-output.json contents -----"
           cat tf-output.json
+          echo "-----------------------------------"
 
       - name: Move output to root for upload
         run: mv tf-output.json ../tf-output.json
@@ -110,7 +111,6 @@ jobs:
         with:
           name: terraform-output
 
-      # ✅ Add JSON Validation
       - name: Validate tf-output.json
         run: |
           echo "✅ Validating tf-output.json..."
@@ -118,15 +118,19 @@ jobs:
             echo "❌ Invalid JSON format in tf-output.json"
             exit 1
           fi
-          echo "✅ JSON is valid"
 
       - name: Debug - Show tf-output.json
         run: cat tf-output.json
 
+      - name: Sanitize tf-output.json
+        run: |
+          jq . tf-output.json > sanitized-tf-output.json
+          mv sanitized-tf-output.json tf-output.json
+
       - name: Extract EC2 Public IP
         id: extract-ip
         run: |
-          echo "📦 Extracting public IP from tf-output.json"
+          echo "Parsing tf-output.json for public_ip"
           IP=$(jq -r '.public_ip.value' tf-output.json)
           echo "✅ Extracted IP: $IP"
           echo "EC2_IP=$IP" >> $GITHUB_ENV
